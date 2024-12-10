@@ -13,4 +13,5 @@ SRC=$(realpath $SRC)
 BUILD=$(realpath $BUILD)
 WASM_UTILS=$(realpath $WASM_UTILS)
 
+PATH=$PATH:/emsdk/upstream/bin
 clang++ -O3 -I$WASM_UTILS -std=c++20 $WASM_UTILS/*.cpp $SRC/wasm-package.cpp -o $BUILD/wasm-package
