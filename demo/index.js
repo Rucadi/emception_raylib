@@ -79,7 +79,7 @@ async function main() {
     `, document.body);
 
     const flags = document.getElementById("flags");
-    flags.value = "-O2 -fexceptions --proxy-to-worker -sEXIT_RUNTIME=1";
+    flags.value = "--proxy-to-worker -sEXIT_RUNTIME=1 -I/raylib/include -L/raylib/lib -lraylib -s USE_GLFW=3 -s ASSERTIONS=1 -s WASM=1 -s ASYNCIFY -DPLATFORM_WEB -sMAX_WEBGL_VERSION=2 ";
     
     window.split = Split({
         onDrag: () => {
