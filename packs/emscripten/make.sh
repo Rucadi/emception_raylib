@@ -30,6 +30,7 @@ mv _package.json package.json
 # * avoid invalidating the cache
 # * fix a bug with proxy_to_worker
 patch -p2 < $SRC/emscripten.patch
+patch -p2 < $SRC/glfw.patch
 
 # Install dependencies (but nor development dependencies)
 npm i --only=prod
