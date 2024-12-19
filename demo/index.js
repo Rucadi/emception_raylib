@@ -3,9 +3,7 @@ import { Terminal } from "xterm";
 import { FitAddon } from 'xterm-addon-fit';
 import Split from "split-grid";
 import { spinner, previewTemplate, miniBrowserTemplate } from "./preview-template.mjs";
-
-import { render, html } from "lit";
-
+import { html, render } from "lit";
 import * as Comlink from "comlink";
 import EmceptionWorker from "./emception.worker.js";
 
@@ -18,9 +16,9 @@ window.Comlink = Comlink;
 
 const editorContainer = document.createElement("div");
 const editor = monaco.editor.create(editorContainer, {
-	value: "",
-	language: "cpp",
-	theme: "vs-dark",
+    value: "",
+    language: "cpp",
+    theme: "vs-dark",
 });
 
 const terminalContainer = document.createElement("div");
@@ -39,6 +37,7 @@ terminal.loadAddon(terminalFitAddon);
 window.editor = editor;
 window.terminal = terminal;
 
+// Initialize with main.cpp
 editor.setValue(`#include <iostream>
 
 int main(void) {
@@ -62,8 +61,11 @@ async function main() {
                 <div id="title">Code Editor</div>
                 <input id="flags" type="text"></input>
                 <button disabled id="compile">Loading</button>
+
             </div>
-            <div id="editor">${editorContainer}</div>
+            <div id="editor">
+                ${editorContainer}
+            </div>
             <div id="vgutter"></div>
             <div id="preview">
                 <iframe id="preview-frame"></iframe>
@@ -74,6 +76,10 @@ async function main() {
                     ${terminalContainer}
                 </div>
                 <div id="status"></div>
+                <div id="file_view">
+                        <div id="tabs" style="display: flex"></div>
+                        <button id="new-file-button" @click=${createNewFile}>[+]</button>
+                </div>
             </div>
         </div>
     `, document.body);
@@ -142,16 +148,96 @@ async function main() {
     emception.onprocessstart = Comlink.proxy(onprocessstart);
     emception.onprocessend = Comlink.proxy(onprocessend);
 
+    // File management
+    const files = {
+        'main.cpp': editor.getValue(),
+    };
+    let activeFile = 'main.cpp';
+
+    function updateTabs() {
+        const tabsContainer = document.getElementById('tabs');
+        tabsContainer.innerHTML = '';
+    
+        // Render each file tab
+        Object.keys(files).forEach(file => {
+            const tabContainer = document.createElement('div');
+            tabContainer.className = 'tab-container';
+    
+            // Create the tab button
+            const tabButton = document.createElement('button');
+            tabButton.className = `tab ${file === activeFile ? 'active' : ''}`;
+            tabButton.textContent = file;
+            tabButton.addEventListener('click', () => switchFile(file));
+            tabContainer.appendChild(tabButton);
+    
+            // Add a remove button for non-default files
+            if (file !== 'main.cpp') {
+                const removeButton = document.createElement('button');
+                removeButton.className = 'remove-icon';
+                removeButton.textContent = '-';
+                removeButton.addEventListener('click', () => removeFile(file));
+                tabContainer.appendChild(removeButton);
+            }
+    
+            tabsContainer.appendChild(tabContainer);
+        });
+    
+    }
+    
+    
+    function saveActiveFile()
+    {
+        files[activeFile] = editor.getValue(); // Save current file content
+    }
+    // Function to switch between files
+    function switchFile(file) {
+        saveActiveFile();
+        activeFile = file;
+        editor.setValue(files[file]); // Load content of the selected file
+        updateTabs(); // Update the tab UI
+    }
+    
+ 
+    function createNewFile() {
+        const newFileName = prompt("Enter new file name:");
+        if (newFileName && !files[newFileName]) {
+            files[newFileName] = '';
+            switchFile(newFileName);
+        }
+    }
+
+    
+    // Function to remove a file from the list
+    function removeFile(file) {
+        switchFile("main.cpp")
+        delete files[file];
+        updateTabs();
+    }
+    
+    // Call updateTabs to render the initial tabs
+    updateTabs();
+
     const compile = document.getElementById("compile");
     compile.addEventListener("click", async () => {
+        saveActiveFile();
         compile.disabled = true;
         compile.textContent = "Compiling";
         status.textContent = "Running:";
         preview(previewTemplate(spinner(80), "Compiling", ""));
+        
         try {
             terminal.reset();
-            await emception.fileSystem.writeFile("/working/main.cpp", editor.getValue());
-            const cmd = `em++ ${flags.value} -sSINGLE_FILE=1 -sMINIFY_HTML=0 -sUSE_CLOSURE_COMPILER=0 main.cpp -o main.html`;
+            // Write all files to Emception file system
+            for (const [fileName, content] of Object.entries(files)) {
+                await emception.fileSystem.writeFile(`/working/${fileName}`, content);
+            }
+            
+            const filteredFiles = Object.keys(files)
+            .filter(file => !file.endsWith('.hpp') && !file.endsWith('.h'))
+            .join(' ');
+
+            const cmd = `em++ ${flags.value} -sSINGLE_FILE=1 -sMINIFY_HTML=0 -sUSE_CLOSURE_COMPILER=0 ${filteredFiles} -o main.html`;
+            
             onprocessstart(`/emscripten/${cmd}`.split(/\s+/g));
             terminal.write(`$ ${cmd}\n\n`);
             const result = await emception.run(cmd);
@@ -165,9 +251,9 @@ async function main() {
                 // Locate the "output" element and hide it
                 const output = doc.getElementById("output");
                 if (output) {
-                  output.style.display = "none"; // Hides the element
-                  output.style.width = "0";
-                  output.style.height = "0";
+                    output.style.display = "none"; // Hides the element
+                    output.style.width = "0";
+                    output.style.height = "0";
                 }
                 
                 // Create a script to override document.write and document.writeln
@@ -200,12 +286,12 @@ async function main() {
                 }
                 // Ensure the script runs immediately
                 doc.body.appendChild(script);
-                                
+                
                 // Pass the modified HTML to the mini-browser
                 previewMiniBrowser(doc.documentElement.outerHTML);
             } else {
                 terminal.write(`Emception compilation failed`);
-                preview(previewTemplate("", "", "The compilation failed, check the output bellow"));
+                preview(previewTemplate("", "", "The compilation failed, check the output below"));
             }
             terminal.write("\n");
         } catch (err) {
@@ -238,5 +324,4 @@ async function main() {
     preview(previewTemplate("", "", "<div>Your compiled code will run here.</div><div>Click <div style=\"display: inline-block;border: 1px solid #858585;background: #454545;color: #cfcfcf;font-size: 15px;padding: 5px 10px;border-radius: 3px;\">Compile!</div> above to start.</div>"));
 }
 
-main()
-
+main();

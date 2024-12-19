@@ -86,7 +86,8 @@ html, body {
     grid-template-rows: minmax(0, 1fr);
     grid-template-areas:
         "terminal"
-        "status";
+        "status"
+        "file_view";
 }
 
 #terminal {
@@ -210,4 +211,51 @@ html, body {
 .xterm-viewport::-webkit-scrollbar-thumb {
     min-height: 20px;
     background-color: #ffffff20;
+}
+
+#file_view {
+    background-color: #1e1e1e; /* Dark background matching VS Code's dark theme */
+    color: #d4d4d4; /* Light text color for contrast */
+    border: 1px solid #393939; /* Border to separate from other elements */
+    padding: 10px; /* Padding for content inside */
+    overflow: auto; /* Allow scrolling if content overflows */
+    height: 100%; /* Full height to match the layout */
+    grid-area: file_view;
+
+}
+
+/* Styling for tabs to make them consistent */
+.tab-container {
+    background-color: #252525; /* Darker background for container */
+    padding: 2px; /* Small padding around tab containers */
+    display: flex;
+
+}
+
+.tabs {
+    display: flex;
+}
+.tab {
+    background-color: #1e1e1e; /* Tab background color */
+    border: 1px solid #454545; /* Border for tabs */
+    color: #d4d4d4; /* Text color */
+    margin: 0 2px 0 0; /* Spacing between tabs */
+    border-radius: 3px 3px 0 0; /* Rounded corners on top */
+    display: flex;
+
+}
+
+.tab.active {
+    background-color: #007acc; /* Active tab color, similar to VS Code */
+    border-bottom-color: #1e1e1e; /* Match the file_view background for continuity */
+}
+
+.remove-icon {
+    background-color: #ff5050; /* Red for remove icon */
+    color: #1e1e1e; /* Dark text for contrast on red */
+    border: 1px solid #454545; /* Border for consistency */
+}
+
+.tab-container:hover .remove-icon {
+    display: inline-block; /* Show remove icon on hover */
 }
