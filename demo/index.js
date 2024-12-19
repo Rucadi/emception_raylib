@@ -59,7 +59,7 @@ async function main() {
     render(html`
         <div id="layout">
             <div id="header">
-                <div id="title">Emception</div>
+                <div id="title">Code Editor</div>
                 <input id="flags" type="text"></input>
                 <button disabled id="compile">Loading</button>
             </div>
@@ -79,7 +79,7 @@ async function main() {
     `, document.body);
 
     const flags = document.getElementById("flags");
-    flags.value = "-O2 -fexceptions --proxy-to-worker -sEXIT_RUNTIME=1";
+    flags.value = "-O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20";
     
     window.split = Split({
         onDrag: () => {
@@ -159,7 +159,50 @@ async function main() {
             if (result.returncode == 0) {
                 terminal.write("Emception compilation finished");
                 const content = await emception.fileSystem.readFile("/working/main.html", { encoding: "utf8" });
-                previewMiniBrowser(content);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, "text/html");
+                
+                // Locate the "output" element and hide it
+                const output = doc.getElementById("output");
+                if (output) {
+                  output.style.display = "none"; // Hides the element
+                  output.style.width = "0";
+                  output.style.height = "0";
+                }
+                
+                // Create a script to override document.write and document.writeln
+                const script = doc.createElement("script");
+                script.textContent = `
+                (function() {
+                    const originalTextarea = document.getElementById("output");
+                    const originalValueDescriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+                    Object.defineProperty(originalTextarea, 'value', {
+                        set: function(value) {
+                            window.parent.parent.terminal.write(value)
+                        },
+                        get: function() {
+                            return originalValueDescriptor.get.call(this);
+                        },
+                        configurable: true
+                    });
+
+                })();
+                `;
+
+                const link = doc.querySelector('a[href="http://emscripten.org"]');
+                if (link) {
+                    link.remove();
+                }
+
+                const omnibar = doc.querySelector('#omnibar');
+                if (omnibar) {
+                    omnibar.remove();
+                }
+                // Ensure the script runs immediately
+                doc.body.appendChild(script);
+                                
+                // Pass the modified HTML to the mini-browser
+                previewMiniBrowser(doc.documentElement.outerHTML);
             } else {
                 terminal.write(`Emception compilation failed`);
                 preview(previewTemplate("", "", "The compilation failed, check the output bellow"));
@@ -169,7 +212,7 @@ async function main() {
             preview(previewTemplate("", "", "Something went wrong, please file a bug report"));
             console.error(err);
         } finally {
-            status.textContent = "Iddle";
+            status.textContent = "Idle";
             statusElements.splice(0, statusElements.length);
             compile.textContent = "Compile!";
             compile.disabled = false;
@@ -189,10 +232,11 @@ async function main() {
 
     terminal.reset();
     terminal.write("Emception is ready\n");
-    status.textContent = "Iddle";
+    status.textContent = "Idle";
     compile.disabled = false;
     compile.textContent = "Compile!";
     preview(previewTemplate("", "", "<div>Your compiled code will run here.</div><div>Click <div style=\"display: inline-block;border: 1px solid #858585;background: #454545;color: #cfcfcf;font-size: 15px;padding: 5px 10px;border-radius: 3px;\">Compile!</div> above to start.</div>"));
 }
 
-main();
+main()
+
