@@ -209,12 +209,12 @@ async function compile(preview, previewMiniBrowser)
                 await emception.fileSystem.writeFile(`/working/${fileName}`, content);
             }
         
-            // Filter out .hpp and .h files
+            // Filter to include only C/C++ source file extensions
+            const validExtensions = ['.c', '.cpp', '.cxx', '.cc', '.c++', '.cp']; // Add other valid C/C++ extensions as needed
             const filteredFiles = Object.keys(window.editors)
-                .filter(file => !file.endsWith('.hpp') && !file.endsWith('.h'))
+                .filter(file => validExtensions.some(ext => file.endsWith(ext)))
                 .map(file => `/working/${file}`) // Prepend working directory to filenames
                 .join(' ');
-        
             // Construct the em++ compilation command
             const cmd = `em++ -O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s FETCH -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
         
