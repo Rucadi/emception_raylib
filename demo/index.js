@@ -231,9 +231,7 @@ async function compile(preview, previewMiniBrowser)
                 const styleElement = doc.querySelector("style");
 
                 if (styleElement) {
-                    // Modify the style text to change the border
                     styleElement.textContent = emscripten_css_replacement;
-                    terminal.write(emscripten_css_replacement)
                 }
 
             // Add a "Download HTML" button to the controls dynamically
