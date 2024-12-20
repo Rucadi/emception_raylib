@@ -216,7 +216,7 @@ async function compile(preview, previewMiniBrowser)
                 .map(file => `/working/${file}`) // Prepend working directory to filenames
                 .join(' ');
             // Construct the em++ compilation command
-            const cmd = `em++ -O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s FETCH -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
+            const cmd = `em++ -O1 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -lrlImGui -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s FETCH -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
         
             onprocessstart(`/emscripten/${cmd}`.split(/\s+/g));
             terminal.write(`$ ${cmd}\n\n`);
