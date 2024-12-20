@@ -29,7 +29,7 @@ export const miniBrowserTemplate = (url, src) => `
                 #mini-browser-toolbar {
                     background: #f6f5f3;
                     display: grid;
-                    grid-template-columns: 40px 40px 40px;
+                    grid-template-columns: 40px 40px 40px 1fr;
                     align-items: center;
                     z-index: 999;
                     border-bottom: 1px solid #c5c4c2;
@@ -116,15 +116,35 @@ export const miniBrowserTemplate = (url, src) => `
                     color: #444;
                     box-sizing: border-box;
                 }
+                #powered-by {
+                    justify-self: end; /* This will push the powered-by text to the right */
+                    font-size: 1em;
+                    color: #333;
+                    display: flex;
+                    align-items: center;
+                    margin-right: 5px;
+                }
+                #powered-by a {
+                    color: #007bff;
+                    text-decoration: none;
+                    font-weight: bold;
+                    margin-left: 3px;
+                    margin-right: 3px;
+                }
+                #powered-by a:hover {
+                    text-decoration: underline;
+                }
             </style>
         </head>
         <body>
             <div id="mini-browser">
                 <div id="mini-browser-toolbar">
-                <button id="refresh">
-                <button id="download">
-                <button id="fullscreen">
-                </button></div>
+                    <button id="refresh">
+                    <button id="download">
+                    <button id="fullscreen">
+                    </button>
+                    <div id="powered-by">Powered by <a  target="_blank" rel="noopener noreferrer" href="https://emscripten.org/">Emscripten</a>  and <a  target="_blank" rel="noopener noreferrer" href="https://github.com/jprendes/emception">Emception</a></div>
+                </div>
                 <iframe id="preview-frame" src="${src}"></iframe>
                 <script>
                     document.getElementById("refresh").addEventListener("click", () => {

@@ -12,6 +12,7 @@ html, body {
 #header {
     width: 100%;
     padding: 10px;
+    height: 50px; /* Set your desired height for the header */
     background-color: #282c34;
     display: flex;
     justify-content: space-between;
@@ -48,7 +49,7 @@ html, body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: 100%; /* Ensures full height of the page */
+    height: calc(100% - 80px); /* Subtract header + tabs heights (50px + 30px) */
 }
 
 .split-horizontal {
@@ -82,16 +83,6 @@ html, body {
     padding: 10px;
     font-family: Consolas, 'Courier New', monospace;
     white-space: pre-wrap; /* Ensures newlines are maintained */
-}
-
-#console-container  > div {
-    height: 100%;
-}
-
-#console-container  {
-    padding: 5px;
-    padding-right: 0;
-    background-color: #1e1e1e;
     overflow: hidden;
 }
 
@@ -106,6 +97,7 @@ iframe {
     display: flex;
     background-color: #1e1e1e;
     border-bottom: 1px solid #3c3c3c;
+    height: 30px; /* Set your desired height for the tabs */
 }
 
 .tab {
@@ -188,15 +180,4 @@ iframe {
 .xterm-viewport::-webkit-scrollbar-thumb {
     min-height: 20px;
     background-color: #ffffff20;
-}
-
-
-#terminal > div {
-    height: 100%;
-}
-
-#terminal {
-    padding: 5px;
-    padding-right: 0;
-    background-color: #1e1e1e;
 }

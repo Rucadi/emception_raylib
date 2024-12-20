@@ -7,6 +7,7 @@ import { html, render } from "lit";
 import * as Comlink from "comlink";
 import EmceptionWorker from "./emception.worker.js";
 import { emscripten_css_replacement} from "./new_style.js"
+import { examplecpp} from "./example_code.js"
 import "./style.css";
 import "xterm/css/xterm.css";
 
@@ -30,17 +31,16 @@ async function loadterminal()
     });
     terminal.open(terminalContainer);
     
-    const terminalFitAddon = new FitAddon();
-    terminal.loadAddon(terminalFitAddon);
+    window.terminalFitAddon = new FitAddon();
+    terminal.loadAddon(window.terminalFitAddon);
     window.terminal = terminal;
     
     emception.onstdout = Comlink.proxy((str) => terminal.write(str + "\n"));
     emception.onstderr = Comlink.proxy((str) => terminal.write(str + "\n"));
     
     window.addEventListener("resize", () => {
-        terminalFitAddon.fit();
+        window.terminalFitAddon.fit();
     });    
-    
 }
 
 async function loadcode(){
@@ -48,8 +48,7 @@ async function loadcode(){
     const editorContainer = document.getElementById('editor-container');
 
     let tabData = [
-        { id: 'main.cpp', content: '// Tab 1 content' },
-        { id: 'main.hpp', content: '// Tab 2 content' },
+        { id: 'main.cpp', content: examplecpp },
     ];
 
     let editors = {};
@@ -120,18 +119,29 @@ async function loadcode(){
 
         editors[tabId].layout();
     }
-
     function addTab(name) {
-        const id = `name`;
+        // Check if the tab already exists
+        if (tabData.some(tab => tab.id === name)) {
+            alert(`A tab with the name "${name}" already exists.`);
+            return;
+        }
+    
+        const id = name;
         const newTab = { id, content: '// New tab content' };
         tabData.push(newTab);
-
+    
         createTab(newTab);
         createEditor(newTab);
         switchTab(id);
     }
 
     function removeTab(tabId) {
+        // Show confirmation dialog
+        const confirmed = confirm(`Are you sure you want to delete the tab "${tabId}"?`);
+        if (!confirmed) {
+            return;
+        }
+
         if (activeTab === tabId) {
             const index = tabData.findIndex(tab => tab.id === tabId);
             const nextTab = tabData[index + 1] || tabData[index - 1];
@@ -206,7 +216,7 @@ async function compile(preview, previewMiniBrowser)
                 .join(' ');
         
             // Construct the em++ compilation command
-            const cmd = `em++ -O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
+            const cmd = `em++ -O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s FETCH -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
         
             onprocessstart(`/emscripten/${cmd}`.split(/\s+/g));
             terminal.write(`$ ${cmd}\n\n`);
@@ -338,7 +348,6 @@ async function main() {
     render(html`
     <div id="header">
         <div id="site-name">ToyWithRaylib</div>
-        <button id="shareButton">Share</button>
         <button id="compileButton">Compile</button>
     </div>
     <div id="tabs"></div>
@@ -352,7 +361,6 @@ async function main() {
         </div>
         <div id="console-container"></div>
     </div>
-    <div id="status"></div>
     `, document.body);
 
     const frame = document.getElementById("gameIframe");
@@ -379,7 +387,13 @@ async function main() {
         sizes: [50, 50],
         minSize: 100,
         gutterSize: 8,
-        cursor: 'col-resize'
+        cursor: 'col-resize',
+        ondrag: () => {
+            window.terminalFitAddon.fit();
+        },
+        onDragEnd: () => {
+            window.terminalFitAddon.fit();   
+        }
     });
 
     Split(['#editor-iframe-container', '#console-container'], {
@@ -387,11 +401,21 @@ async function main() {
         direction: 'vertical',
         minSize: 100,
         gutterSize: 8,
-        cursor: 'row-resize'
+        cursor: 'row-resize',
+        ondrag: () => {
+            window.terminalFitAddon.fit();
+        },
+        onDragEnd: () => {
+            window.terminalFitAddon.fit();   
+        }
     });
 
 
-
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            window.terminalFitAddon.fit();
+        });
+    });
     await emception.init();
     preview(previewTemplate("", "", "<div>Your compiled code will run here.</div><div>Click <div style=\"display: inline-block;border: 1px solid #858585;background: #454545;color: #cfcfcf;font-size: 15px;padding: 5px 10px;border-radius: 3px;\">Compile!</div> above to start.</div>"));
 
