@@ -98,6 +98,8 @@ iframe {
     background-color: #1e1e1e;
     border-bottom: 1px solid #3c3c3c;
     height: 30px; /* Set your desired height for the tabs */
+    overflow-x: auto; /* Enable horizontal scrolling */
+    white-space: nowrap; /* Prevent wrapping of tabs */
 }
 
 .tab {
@@ -109,6 +111,7 @@ iframe {
     border-bottom: none;
     display: flex;
     align-items: center;
+    flex-shrink: 0; /* Prevent shrinking of tabs */
 }
 
 .tab.active {
@@ -132,8 +135,26 @@ iframe {
     color: #d4d4d4;
     font-size: 16px;
     justify-content: center;
+    flex-shrink: 0; /* Prevent shrinking of the add button */
 }
 
+/* Optional: Customize the scrollbar */
+#tabs::-webkit-scrollbar {
+    height: 8px; /* Scrollbar height for horizontal scrolling */
+}
+
+#tabs::-webkit-scrollbar-thumb {
+    background-color: #3c3c3c;
+    border-radius: 4px;
+}
+
+#tabs::-webkit-scrollbar-thumb:hover {
+    background-color: #5a5a5a;
+}
+
+#tabs::-webkit-scrollbar-track {
+    background-color: #2d2d2d;
+}
 .editor {
     display: none;
     position: absolute;
