@@ -29,7 +29,7 @@ export const miniBrowserTemplate = (url, src) => `
                 #mini-browser-toolbar {
                     background: #f6f5f3;
                     display: grid;
-                    grid-template-columns: 40px 1fr;
+                    grid-template-columns: 40px 40px 40px;
                     align-items: center;
                     z-index: 999;
                     border-bottom: 1px solid #c5c4c2;
@@ -59,6 +59,49 @@ export const miniBrowserTemplate = (url, src) => `
                 #refresh:hover {
                     background-color: #c5c4c2
                 }
+
+                #fullscreen {
+                    margin: auto;
+                    width: 30px;
+                    height: 30px;
+                    border: 1px solid #c5c4c2;
+                    border-radius: 5px;
+                    font-size: 20px;
+                    display: grid;
+                    align-items: center;
+                    justify-items: center;
+                    color: #333;
+                    background-color: #f6f5f3;
+                    box-sizing: border-box;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='%23666666'%3E%3Cpath d='M6 16c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v8z'/%3E%3C/svg%3E");
+                    background-position: center center;
+                }
+
+                #fullscreen:hover {
+                    background-color: #c5c4c2;
+                }
+
+                #download {
+                    margin: auto;
+                    width: 30px;
+                    height: 30px;
+                    border: 1px solid #c5c4c2;
+                    border-radius: 5px;
+                    font-size: 20px;
+                    display: grid;
+                    align-items: center;
+                    justify-items: center;
+                    color: #333;
+                    background-color: #f6f5f3;
+                    box-sizing: border-box;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='%23666666'%3E%3Cpath d='M19 9l-7 7-7-7h4V3h6v6h4z'/%3E%3C/svg%3E");
+                    background-position: center center;
+                }
+
+                #download:hover {
+                    background-color: #c5c4c2;
+                }
+
                 #omnibar {
                     border: 1px solid #c5c4c2;
                     border-radius: 5px;
@@ -77,13 +120,54 @@ export const miniBrowserTemplate = (url, src) => `
         </head>
         <body>
             <div id="mini-browser">
-                <div id="mini-browser-toolbar"><button id="refresh"></button><span id="omnibar">${url}</span></div>
+                <div id="mini-browser-toolbar">
+                <button id="refresh">
+                <button id="download">
+                <button id="fullscreen">
+                </button></div>
                 <iframe id="preview-frame" src="${src}"></iframe>
                 <script>
                     document.getElementById("refresh").addEventListener("click", () => {
                         document.getElementById("preview-frame").src = "";
                         document.getElementById("preview-frame").src = "${src}";
                     });
+
+                        // Download Button functionality
+    document.getElementById("download").addEventListener("click", () => {
+        const iframe = document.getElementById("preview-frame");
+        const src = iframe.src;
+
+        // Creating a blob with the HTML content of the iframe
+        fetch(src)
+            .then(response => response.text())
+            .then(html => {
+                const blob = new Blob([html], { type: 'text/html' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'game.html'; // Name the downloaded file
+                link.click(); // Trigger the download
+            })
+            .catch(error => console.error("Download error:", error));
+    });
+
+    // Full-Screen Button functionality
+ document.getElementById("fullscreen").addEventListener("click", () => {
+        const iframe = document.getElementById("preview-frame");
+
+        // Access the iframe's contentWindow
+        const iframeWindow = iframe.contentWindow;
+
+        // Make sure the iframe is within the correct context for fullscreen
+        const pointerLockChecked = document.getElementById('pointerLock')?.checked || false;
+        const resizeChecked = document.getElementById('resize')?.checked || false;
+
+        // Call Module.requestFullscreen within the iframe context
+        if (iframeWindow.Module && iframeWindow.Module.requestFullscreen) {
+            iframeWindow.Module.requestFullscreen(pointerLockChecked, resizeChecked);
+        } else {
+            console.error("Module.requestFullscreen is not available in iframe context.");
+        }
+    })
                 </script>
             </div>
         </body>
