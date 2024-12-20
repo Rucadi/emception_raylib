@@ -1,12 +1,12 @@
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { Terminal } from "xterm";
 import { FitAddon } from 'xterm-addon-fit';
-import Split from "split-grid";
+import Split from "split.js";
 import { spinner, previewTemplate, miniBrowserTemplate } from "./preview-template.mjs";
 import { html, render } from "lit";
 import * as Comlink from "comlink";
 import EmceptionWorker from "./emception.worker.js";
-
+import { emscripten_css_replacement} from "./new_style.js"
 import "./style.css";
 import "xterm/css/xterm.css";
 
@@ -14,230 +14,200 @@ const emception = Comlink.wrap(new EmceptionWorker());
 window.emception = emception;
 window.Comlink = Comlink;
 
-const editorContainer = document.createElement("div");
-const editor = monaco.editor.create(editorContainer, {
-    value: "",
-    language: "cpp",
-    theme: "vs-dark",
-});
 
-const terminalContainer = document.createElement("div");
-const terminal = new Terminal({
-    convertEol: true,
-    theme: {
-        background: "#1e1e1e",
-        foreground: "#d4d4d4",
-    },
-});
-terminal.open(terminalContainer);
 
-const terminalFitAddon = new FitAddon();
-terminal.loadAddon(terminalFitAddon);
 
-window.editor = editor;
-window.terminal = terminal;
+async function loadterminal()
+{
 
-// Initialize with main.cpp
-editor.setValue(`#include <iostream>
-
-int main(void) {
-    std::cout << "hello world!\\n";
-    return 0;
-}
-`);
-
-emception.onstdout = Comlink.proxy((str) => terminal.write(str + "\n"));
-emception.onstderr = Comlink.proxy((str) => terminal.write(str + "\n"));
-
-window.addEventListener("resize", () => {
-    editor.layout();
-    terminalFitAddon.fit();
-});
-
-async function main() {
-    render(html`
-        <div id="layout">
-            <div id="header">
-                <div id="title">Code Editor</div>
-                <input id="flags" type="text"></input>
-                <button disabled id="compile">Loading</button>
-
-            </div>
-            <div id="editor">
-                ${editorContainer}
-            </div>
-            <div id="vgutter"></div>
-            <div id="preview">
-                <iframe id="preview-frame"></iframe>
-            </div>
-            <div id="hgutter"></div>
-            <div id="output">
-                <div id="terminal">
-                    ${terminalContainer}
-                </div>
-                <div id="status"></div>
-                <div id="file_view">
-                        <div id="tabs" style="display: flex"></div>
-                        <button id="new-file-button" @click=${createNewFile}>[+]</button>
-                </div>
-            </div>
-        </div>
-    `, document.body);
-
-    const flags = document.getElementById("flags");
-    flags.value = "-O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20";
-    
-    window.split = Split({
-        onDrag: () => {
-            editor.layout();
-            terminalFitAddon.fit();
+    const terminalContainer = document.getElementById("console-container");
+    const terminal = new Terminal({
+        convertEol: true,
+        theme: {
+            background: "#1e1e1e",
+            foreground: "#d4d4d4",
         },
-        columnGutters: [{
-            track: 1,
-            element: document.getElementById("vgutter"),
-        }],
-        rowGutters: [{
-            track: 2,
-            element: document.getElementById("hgutter"),
-        }],
+    });
+    terminal.open(terminalContainer);
+    
+    const terminalFitAddon = new FitAddon();
+    terminal.loadAddon(terminalFitAddon);
+    window.terminal = terminal;
+    
+    emception.onstdout = Comlink.proxy((str) => terminal.write(str + "\n"));
+    emception.onstderr = Comlink.proxy((str) => terminal.write(str + "\n"));
+    
+    window.addEventListener("resize", () => {
+        terminalFitAddon.fit();
+    });    
+    
+}
+
+async function loadcode(){
+    const tabs = document.getElementById('tabs');
+    const editorContainer = document.getElementById('editor-container');
+
+    let tabData = [
+        { id: 'main.cpp', content: '// Tab 1 content' },
+        { id: 'main.hpp', content: '// Tab 2 content' },
+    ];
+
+    let editors = {};
+    let activeTab = null;
+
+    function createTab(tab) {
+        const tabElement = document.createElement('div');
+        tabElement.className = 'tab';
+        tabElement.dataset.id = tab.id;
+
+        const tabTitle = document.createElement('span');
+        tabTitle.textContent = tab.id;
+        tabElement.appendChild(tabTitle);
+
+        const closeButton = document.createElement('span');
+        closeButton.className = 'close-btn';
+        closeButton.textContent = '×';
+        closeButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeTab(tab.id);
+        });
+        tabElement.appendChild(closeButton);
+
+        tabElement.addEventListener('click', () => {
+            switchTab(tab.id);
+        });
+
+        tabs.insertBefore(tabElement, document.querySelector('.tab.add'));
+    }
+
+    function createAddButton() {
+        const addButton = document.createElement('div');
+        addButton.className = 'tab add';
+        addButton.textContent = '+';
+        addButton.addEventListener('click', () => {
+            const name = prompt('Enter tab name:');
+            if (name) {
+                addTab(name);
+            }
+        });
+        tabs.appendChild(addButton);
+    }
+
+    function createEditor(tab) {
+        const editorDiv = document.createElement('div');
+        editorDiv.id = tab.id;
+        editorDiv.className = 'editor';
+        editorContainer.appendChild(editorDiv);
+
+        editors[tab.id] = monaco.editor.create(editorDiv, {
+            value: tab.content,
+            language: 'cpp',
+            theme: 'vs-dark',
+            automaticLayout: true
+        });
+    }
+
+    function switchTab(tabId) {
+        if (activeTab) {
+            document.querySelector(`.tab[data-id="${activeTab}"]`).classList.remove('active');
+            document.getElementById(activeTab).classList.remove('active');
+        }
+
+        activeTab = tabId;
+
+        document.querySelector(`.tab[data-id="${tabId}"]`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+
+        editors[tabId].layout();
+    }
+
+    function addTab(name) {
+        const id = `name`;
+        const newTab = { id, content: '// New tab content' };
+        tabData.push(newTab);
+
+        createTab(newTab);
+        createEditor(newTab);
+        switchTab(id);
+    }
+
+    function removeTab(tabId) {
+        if (activeTab === tabId) {
+            const index = tabData.findIndex(tab => tab.id === tabId);
+            const nextTab = tabData[index + 1] || tabData[index - 1];
+            if (nextTab) {
+                switchTab(nextTab.id);
+            } else {
+                activeTab = null;
+            }
+        }
+
+        document.querySelector(`.tab[data-id="${tabId}"]`).remove();
+        document.getElementById(tabId).remove();
+
+        editors[tabId].dispose();
+        delete editors[tabId];
+        tabData = tabData.filter(tab => tab.id !== tabId);
+    }
+
+    // Initialize tabs and editors
+    tabData.forEach(tab => {
+        createTab(tab);
+        createEditor(tab);
     });
 
-    const frame = document.getElementById("preview-frame");
-    let url = "";
-    function preview(html_content) {
-        if (url) URL.revokeObjectURL(url);
-        url = URL.createObjectURL(new Blob([html_content], { type: 'text/html' }));
-        frame.src = url;
-    }
+    createAddButton();
 
-    let miniUrl = "";
-    function previewMiniBrowser(html_content) {
-        if (miniUrl) URL.revokeObjectURL(miniUrl);
-        miniUrl = URL.createObjectURL(new Blob([html_content], { type: 'text/html' }));
-        preview(miniBrowserTemplate("main.html", miniUrl));
-    }
+    // Set initial active tab
+    switchTab(tabData[0].id);
 
-    preview(previewTemplate(spinner(80), "Loading", ""));
+    window.editors = editors
+}
 
-    const status = document.getElementById("status");
-    const statusElements = [];
+async function compile(preview, previewMiniBrowser)
+{
+
     const onprocessstart = (argv) => {
-        const lastEl = statusElements[statusElements.length - 1] || status;
-        const newEl = document.createElement("div");
-        newEl.className = "process-status";
-        render(html`
-            <div class="process-argv" title=${argv.join(" ")}>${argv.join(" ")}</div>
-        `, newEl);
-        statusElements.push(newEl);
-        lastEl.appendChild(newEl);
-
-        terminalFitAddon.fit();
-        requestAnimationFrame(() => {
-            terminalFitAddon.fit();
-        });
+        
     };
     const onprocessend = () => {
-        const lastEl = statusElements.pop();
-        if (lastEl) lastEl.remove();
-
-        terminalFitAddon.fit();
-        requestAnimationFrame(() => {
-            terminalFitAddon.fit();
-        });
+ 
     };
     emception.onprocessstart = Comlink.proxy(onprocessstart);
     emception.onprocessend = Comlink.proxy(onprocessend);
 
-    // File management
-    const files = {
-        'main.cpp': editor.getValue(),
-    };
-    let activeFile = 'main.cpp';
 
-    function updateTabs() {
-        const tabsContainer = document.getElementById('tabs');
-        tabsContainer.innerHTML = '';
-    
-        // Render each file tab
-        Object.keys(files).forEach(file => {
-            const tabContainer = document.createElement('div');
-            tabContainer.className = 'tab-container';
-    
-            // Create the tab button
-            const tabButton = document.createElement('button');
-            tabButton.className = `tab ${file === activeFile ? 'active' : ''}`;
-            tabButton.textContent = file;
-            tabButton.addEventListener('click', () => switchFile(file));
-            tabContainer.appendChild(tabButton);
-    
-            // Add a remove button for non-default files
-            if (file !== 'main.cpp') {
-                const removeButton = document.createElement('button');
-                removeButton.className = 'remove-icon';
-                removeButton.textContent = '-';
-                removeButton.addEventListener('click', () => removeFile(file));
-                tabContainer.appendChild(removeButton);
-            }
-    
-            tabsContainer.appendChild(tabContainer);
-        });
-    
-    }
-    
-    
-    function saveActiveFile()
-    {
-        files[activeFile] = editor.getValue(); // Save current file content
-    }
-    // Function to switch between files
-    function switchFile(file) {
-        saveActiveFile();
-        activeFile = file;
-        editor.setValue(files[file]); // Load content of the selected file
-        updateTabs(); // Update the tab UI
-    }
-    
- 
-    function createNewFile() {
-        const newFileName = prompt("Enter new file name:");
-        if (newFileName && !files[newFileName]) {
-            files[newFileName] = '';
-            switchFile(newFileName);
-        }
-    }
 
-    
-    // Function to remove a file from the list
-    function removeFile(file) {
-        switchFile("main.cpp")
-        delete files[file];
-        updateTabs();
-    }
-    
-    // Call updateTabs to render the initial tabs
-    updateTabs();
 
-    const compile = document.getElementById("compile");
+
+
+
+    const compile = document.getElementById("compileButton");
+    const terminal = window.terminal;
+
     compile.addEventListener("click", async () => {
-        saveActiveFile();
         compile.disabled = true;
         compile.textContent = "Compiling";
-        status.textContent = "Running:";
+        //status.textContent = "Running:";
         preview(previewTemplate(spinner(80), "Compiling", ""));
         
         try {
             terminal.reset();
             // Write all files to Emception file system
-            for (const [fileName, content] of Object.entries(files)) {
+            for (const [fileName, editor] of Object.entries(window.editors)) {
+                const content = editor.getValue(); // Get the content from the editor
                 await emception.fileSystem.writeFile(`/working/${fileName}`, content);
             }
-            
-            const filteredFiles = Object.keys(files)
-            .filter(file => !file.endsWith('.hpp') && !file.endsWith('.h'))
-            .join(' ');
-
-            const cmd = `em++ ${flags.value} -sSINGLE_FILE=1 -sMINIFY_HTML=0 -sUSE_CLOSURE_COMPILER=0 ${filteredFiles} -o main.html`;
-            
+        
+            // Filter out .hpp and .h files
+            const filteredFiles = Object.keys(window.editors)
+                .filter(file => !file.endsWith('.hpp') && !file.endsWith('.h'))
+                .map(file => `/working/${file}`) // Prepend working directory to filenames
+                .join(' ');
+        
+            // Construct the em++ compilation command
+            const cmd = `em++ -O2 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
+        
             onprocessstart(`/emscripten/${cmd}`.split(/\s+/g));
             terminal.write(`$ ${cmd}\n\n`);
             const result = await emception.run(cmd);
@@ -256,6 +226,65 @@ async function main() {
                     output.style.height = "0";
                 }
                 
+
+                // Locate the <style> element
+                const styleElement = doc.querySelector("style");
+
+                if (styleElement) {
+                    // Modify the style text to change the border
+                    styleElement.textContent = emscripten_css_replacement;
+                    terminal.write(emscripten_css_replacement)
+                }
+
+            // Add a "Download HTML" button to the controls dynamically
+            const controls = doc.getElementById("controls");
+            if (controls) {
+                const span = doc.createElement("span");
+                const button = doc.createElement("input");
+                button.type = "button";
+                button.value = "Download";
+
+                // Assign a unique ID to the button
+                const buttonId = "download-html-button";
+                button.id = buttonId;
+
+                // Append the button to the span, and then to the controls
+                span.appendChild(button);
+                controls.appendChild(span);
+
+                // Create a script to handle the button's functionality
+                const script = doc.createElement("script");
+                script.textContent = `
+                (function() {
+                    const button = document.getElementById("${buttonId}");
+                    if (button) {
+                        button.addEventListener("click", function() {
+                            // Get the current HTML content of the live DOM
+                            const html = document.documentElement.outerHTML;
+
+                            // Create a Blob with the HTML content
+                            const blob = new Blob([html], { type: "text/html" });
+
+                            // Create a temporary link to trigger the download
+                            const link = document.createElement("a");
+                            link.href = URL.createObjectURL(blob);
+                            link.download = "current-page.html"; // Set the file name
+
+                            // Trigger the download
+                            link.click();
+
+                            // Clean up
+                            URL.revokeObjectURL(link.href);
+                        });
+                    }
+                })();
+                `;
+
+                // Append the script to the body to ensure it executes
+                doc.body.appendChild(script);
+            }
+
+
                 // Create a script to override document.write and document.writeln
                 const script = doc.createElement("script");
                 script.textContent = `
@@ -298,30 +327,78 @@ async function main() {
             preview(previewTemplate("", "", "Something went wrong, please file a bug report"));
             console.error(err);
         } finally {
-            status.textContent = "Idle";
-            statusElements.splice(0, statusElements.length);
+            //status.textContent = "Idle";
+            //statusElements.splice(0, statusElements.length);
             compile.textContent = "Compile!";
             compile.disabled = false;
         }
     });
 
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            editor.layout();
-            terminalFitAddon.fit();
-        });
+
+}
+async function main() {
+    render(html`
+    <div id="header">
+        <div id="site-name">ToyWithRaylib</div>
+        <button id="shareButton">Share</button>
+        <button id="compileButton">Compile</button>
+    </div>
+    <div id="tabs"></div>
+    
+    <div id="main-container" class="split-horizontal">
+        <div id="editor-iframe-container" class="split-vertical">
+            <div id="editor-container"></div>
+            <div id="iframe-container">
+                <iframe id="gameIframe"></iframe>
+            </div>
+        </div>
+        <div id="console-container"></div>
+    </div>
+    <div id="status"></div>
+    `, document.body);
+
+    const frame = document.getElementById("gameIframe");
+    let url = "";
+    function preview(html_content) {
+        if (url) URL.revokeObjectURL(url);
+        url = URL.createObjectURL(new Blob([html_content], { type: 'text/html' }));
+        frame.src = url;
+    }
+    preview(previewTemplate(spinner(80), "Loading", ""));
+
+    let miniUrl = "";
+    function previewMiniBrowser(html_content) {
+        if (miniUrl) URL.revokeObjectURL(miniUrl);
+        miniUrl = URL.createObjectURL(new Blob([html_content], { type: 'text/html' }));
+        preview(miniBrowserTemplate("main.html", miniUrl));
+    }
+
+
+    await loadcode();
+    await loadterminal();
+    await compile(preview, previewMiniBrowser);
+    Split(['#editor-container', '#iframe-container'], {
+        sizes: [50, 50],
+        minSize: 100,
+        gutterSize: 8,
+        cursor: 'col-resize'
     });
-    terminal.write("Loading Emception...\n");
-    status.textContent = "Loading...";
+
+    Split(['#editor-iframe-container', '#console-container'], {
+        sizes: [70, 30],
+        direction: 'vertical',
+        minSize: 100,
+        gutterSize: 8,
+        cursor: 'row-resize'
+    });
+
+
 
     await emception.init();
+    preview(previewTemplate("", "", "<div>Your compiled code will run here.</div><div>Click <div style=\"display: inline-block;border: 1px solid #858585;background: #454545;color: #cfcfcf;font-size: 15px;padding: 5px 10px;border-radius: 3px;\">Compile!</div> above to start.</div>"));
 
     terminal.reset();
     terminal.write("Emception is ready\n");
-    status.textContent = "Idle";
-    compile.disabled = false;
-    compile.textContent = "Compile!";
-    preview(previewTemplate("", "", "<div>Your compiled code will run here.</div><div>Click <div style=\"display: inline-block;border: 1px solid #858585;background: #454545;color: #cfcfcf;font-size: 15px;padding: 5px 10px;border-radius: 3px;\">Compile!</div> above to start.</div>"));
 }
 
 main();
