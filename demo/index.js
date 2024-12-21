@@ -7,11 +7,20 @@ import { html, render } from "lit";
 import * as Comlink from "comlink";
 import EmceptionWorker from "./emception.worker.js";
 import { emscripten_css_replacement} from "./new_style.js"
-import { examplecpp} from "./example_code.js"
 import "./style.css";
 import "xterm/css/xterm.css";
 import {deserialiseState, serialiseState } from "./ts/url.js" 
 import * as JSZip from 'jszip';
+
+import buildPyContent from './resources/build.py';
+import mainCpp from './resources/main.cpp';
+
+import { shikiToMonaco } from '@shikijs/monaco'
+import { createHighlighter } from 'shiki'
+
+
+
+
 const emception = Comlink.wrap(new EmceptionWorker());
 window.emception = emception;
 window.Comlink = Comlink;
@@ -59,11 +68,32 @@ function decodeStateFromUrl() {
 }
 
 async function loadcode(){
+
+    
+        // Create the highlighter, it can be reused
+        const highlighter = await createHighlighter({
+            themes: [
+              'github-dark'
+              ],
+            langs: [
+              'javascript',
+              'typescript',
+              'vue',
+              'python',
+              'cpp'
+            ],
+          })
+          
+        monaco.languages.register({ id: 'python' })
+        shikiToMonaco(highlighter, monaco)
+
+
     const tabs = document.getElementById('tabs');
     const editorContainer = document.getElementById('editor-container');
 
     let tabData = [
-        { id: 'main.cpp', content: examplecpp },
+        { id: 'main.cpp', content: mainCpp },
+        { id: 'build.py', content: buildPyContent}
     ];
 
      // Populate editor with code from URL if available
@@ -130,12 +160,14 @@ async function loadcode(){
         editorDiv.className = 'editor';
         editorContainer.appendChild(editorDiv);
 
-        editors[tab.id] = monaco.editor.create(editorDiv, {
+        const codeConfig = {
             value: tab.content,
-            language: 'cpp',
-            theme: 'vs-dark',
+            language: tab.id.endsWith('.py') ? 'python' : 'cpp', 
+            theme: 'github-dark', 
             automaticLayout: true
-        });
+        };
+
+        editors[tab.id] = monaco.editor.create(editorDiv, codeConfig);
     }
 
     window.createEditor = createEditor;
@@ -180,7 +212,7 @@ async function loadcode(){
             }
         }
 
-
+        
         if (activeTab === tabId) {
             const index = tabData.findIndex(tab => tab.id === tabId);
             const nextTab = tabData[index + 1] || tabData[index - 1];
@@ -273,12 +305,6 @@ async function compile(preview, previewMiniBrowser)
     emception.onprocessstart = Comlink.proxy(onprocessstart);
     emception.onprocessend = Comlink.proxy(onprocessend);
 
-
-
-
-
-
-
     const terminal = window.terminal;
 
     const compileFn = async () => {
@@ -287,95 +313,35 @@ async function compile(preview, previewMiniBrowser)
         try {
             terminal.reset();
             // Write all files to Emception file system
+           
+            await emception.runpyscript("import shutil; shutil.rmtree('/working')")
+
             for (const [fileName, editor] of Object.entries(window.editors)) {
                 const content = editor.getValue(); // Get the content from the editor
                 await emception.fileSystem.writeFile(`/working/${fileName}`, content);
             }
         
-            // Filter to include only C/C++ source file extensions
-            const validExtensions = ['.c', '.cpp', '.cxx', '.cc', '.c++', '.cp']; // Add other valid C/C++ extensions as needed
-            const filteredFiles = Object.keys(window.editors)
-                .filter(file => validExtensions.some(ext => file.endsWith(ext)))
-                .map(file => `/working/${file}`) // Prepend working directory to filenames
-                .join(' ');
-            // Construct the em++ compilation command
-            const cmd = `em++ -O1 -fexceptions  -sEXIT_RUNTIME=1 -sUSE_GLFW=3 -I/raylib/include -L/raylib/lib -lraylib -lrlImGui -DPLATFORM_WEB -sASYNCIFY -std=c++20 -s SINGLE_FILE=1 -s MINIFY_HTML=0 -s FETCH -s USE_CLOSURE_COMPILER=0 ${filteredFiles} -o /working/main.html`;
-        
-            onprocessstart(`/emscripten/${cmd}`.split(/\s+/g));
+            const cmd = `build`;
             terminal.write(`$ ${cmd}\n\n`);
-            const result = await emception.run(cmd);
+            const result = await emception.runpy(cmd);
             terminal.write("\n");
             if (result.returncode == 0) {
                 terminal.write("Emception compilation finished");
                 const content = await emception.fileSystem.readFile("/working/main.html", { encoding: "utf8" });
+                if(!content)
+                {
+                    content = "<html></html>"
+                }
+
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(content, "text/html");
                 
-                // Locate the "output" element and hide it
-                const output = doc.getElementById("output");
-                if (output) {
-                    output.style.display = "none"; // Hides the element
-                    output.style.width = "0";
-                    output.style.height = "0";
-                }
-                
-
-                // Locate the <style> element
                 const styleElement = doc.querySelector("style");
 
                 if (styleElement) {
                     styleElement.textContent = emscripten_css_replacement;
                 }
-
-            // Add a "Download HTML" button to the controls dynamically
-            const controls = doc.getElementById("controls");
-            if (controls) {
-                const span = doc.createElement("span");
-                const button = doc.createElement("input");
-                button.type = "button";
-                button.value = "Download";
-
-                // Assign a unique ID to the button
-                const buttonId = "download-html-button";
-                button.id = buttonId;
-
-                // Append the button to the span, and then to the controls
-                span.appendChild(button);
-                controls.appendChild(span);
-
-                // Create a script to handle the button's functionality
-                const script = doc.createElement("script");
-                script.textContent = `
-                (function() {
-                    const button = document.getElementById("${buttonId}");
-                    if (button) {
-                        button.addEventListener("click", function() {
-                            // Get the current HTML content of the live DOM
-                            const html = document.documentElement.outerHTML;
-
-                            // Create a Blob with the HTML content
-                            const blob = new Blob([html], { type: "text/html" });
-
-                            // Create a temporary link to trigger the download
-                            const link = document.createElement("a");
-                            link.href = URL.createObjectURL(blob);
-                            link.download = "current-page.html"; // Set the file name
-
-                            // Trigger the download
-                            link.click();
-
-                            // Clean up
-                            URL.revokeObjectURL(link.href);
-                        });
-                    }
-                })();
-                `;
-
-                // Append the script to the body to ensure it executes
-                doc.body.appendChild(script);
-            }
-
-
+            
                 // Create a script to override document.write and document.writeln
                 const script = doc.createElement("script");
                 script.textContent = `
@@ -415,7 +381,7 @@ async function compile(preview, previewMiniBrowser)
             }
             terminal.write("\n");
         } catch (err) {
-            preview(previewTemplate("", "", "Something went wrong, please file a bug report"));
+            preview(previewMiniBrowser("", "", "Something went wrong, please file a bug report"));
             console.error(err);
         } finally {
             //status.textContent = "Idle";

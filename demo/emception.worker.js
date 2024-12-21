@@ -71,11 +71,46 @@ class Emception {
         })
     };
 
+    runpy(...args) {
+        if (args.length == 1) args = args[0].split(/ +/);
+        args = [
+            "/usr/bin/python",
+            "-E",
+            `/working/${args[0]}.py`,
+            ...args.slice(1)
+        ];
+        return this.tools["main-python"].exec(args, {
+            print: (...args) => this.onstdout(...args),
+            printErr: (...args) => this.onstderr(...args),
+            cwd: "/working",
+            path: ["/working"],
+        })
+    };
+
     _run_process(argv, opts = {}) {
         this.onprocessstart(argv);
         const result = this._run_process_impl(argv, opts);
         this.onprocessend(result);
         return result;
+    }
+
+    runpyscript(scriptContent) {
+    
+        // Construct the command to run the Python code using -c
+        const pythonArgs = [
+            "/usr/bin/python",
+            "-E",  // Disable user site directories
+            "-c",  // Indicate we are passing a script directly as a string
+            scriptContent
+        ];
+    
+        // Execute the Python script with the specified arguments
+        return this.tools["main-python"].exec(pythonArgs, {
+            print: (...args) => this.onstdout(...args),  // Handle standard output
+            printErr: (...args) => this.onstderr(...args),  // Handle standard error
+            cwd: "/working",  // Set the working directory
+            path: ["/working"],  // Set the Python module search path
+        });
     }
 
     _run_process_impl(argv, opts = {}) {

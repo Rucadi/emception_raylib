@@ -105,15 +105,15 @@ canvas.emscripten {
 }
 
 #output {
-  width: 100%;
-  height: 200px;
+  width: 0;
+  height: 0;
   margin: 0 auto;
   margin-top: 10px;
   border-left: 0px;
   border-right: 0px;
   padding-left: 0px;
   padding-right: 0px;
-  display: block;
+  display: none;
   background-color: black;
   color: white;
   font-family: 'Lucida Console', Monaco, monospace;

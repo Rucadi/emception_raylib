@@ -5,6 +5,7 @@
         "dev": "webpack serve --mode=development --stats-children"
     },
     "devDependencies": {
+        "@shikijs/monaco": "^1.24.3",
         "comlink": "^4.3.1",
         "compression-webpack-plugin": "^9.0.0",
         "copy-webpack-plugin": "^9.0.1",
@@ -12,8 +13,8 @@
         "html-webpack-plugin": "^5.3.2",
         "lit": "^2.0.0-rc.4",
         "local-echo": "github:wavesoft/local-echo",
-        "monaco-editor": "^0.29.1",
-        "monaco-editor-webpack-plugin": "^5.0.0",
+        "monaco-editor": "^0.38.0",
+        "monaco-editor-webpack-plugin": "^7.1.0",
         "style-loader": "^3.3.1",
         "webpack": "^5.52.1",
         "webpack-cli": "^4.8.0",
@@ -26,6 +27,8 @@
     "dependencies": {
         "jszip": "^3.10.1",
         "lz-string": "^1.5.0",
+        "raw-loader": "^4.0.2",
+        "shiki": "^1.24.3",
         "split.js": "^1.3.2",
         "ts-loader": "^9.5.1"
     }

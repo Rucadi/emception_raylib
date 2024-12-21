@@ -1,4 +1,4 @@
-export const examplecpp = `
+
 /*******************************************************************************************
 *
 *   raylib [core] example - 2D Camera system
@@ -140,4 +140,3 @@ int main(void)
 
     return 0;
 }
-`;
