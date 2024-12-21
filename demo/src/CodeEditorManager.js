@@ -70,7 +70,11 @@ export class CodeEditorManager {
     }
 
     createInitialTabsAndEditors() {
-        this.tabData.forEach(tab => {
+        // Ensure build.py is created after all other tabs
+        const otherTabs = this.tabData.filter(tab => tab.id !== 'build.py');
+        const buildPyTab = this.tabData.find(tab => tab.id === 'build.py');
+    
+        [...otherTabs, buildPyTab].forEach(tab => {
             this.createTab(tab);
             this.createEditor(tab);
         });
@@ -80,26 +84,42 @@ export class CodeEditorManager {
         const tabElement = document.createElement('div');
         tabElement.className = 'tab';
         tabElement.dataset.id = tab.id;
-
+    
         const tabTitle = document.createElement('span');
-        tabTitle.textContent = tab.id;
+        if (tab.id === 'build.py') {
+            tabTitle.textContent = '⚙'; // Display gear icon
+            tabTitle.style.fontSize = '1.2em'; // Adjust size for better visibility
+        } else {
+            tabTitle.textContent = tab.id;
+        }
         tabElement.appendChild(tabTitle);
-
-        const closeButton = document.createElement('span');
-        closeButton.className = 'close-btn';
-        closeButton.textContent = '×';
-        closeButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.removeTab(tab.id);
-        });
-        tabElement.appendChild(closeButton);
-
+    
+        // Add close button only for non-build.py tabs
+        if (tab.id !== 'build.py') {
+            const closeButton = document.createElement('span');
+            closeButton.className = 'close-btn';
+            closeButton.textContent = '×';
+            closeButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeTab(tab.id);
+            });
+            tabElement.appendChild(closeButton);
+        }
+    
         tabElement.addEventListener('click', () => {
             this.switchTab(tab.id);
         });
-
-        this.tabs.insertBefore(tabElement, document.querySelector('.tab.add'));
+    
+        // If it's build.py, always add it at the end
+        if (tab.id === 'build.py') {
+            this.tabs.appendChild(tabElement);
+        } else {
+            // Insert new tabs before the build.py tab
+            const buildPyTab = document.querySelector('.tab[data-id="build.py"]');
+            this.tabs.insertBefore(tabElement, buildPyTab);
+        }
     }
+    
 
     createAddButton() {
         const addButton = document.createElement('div');
@@ -144,16 +164,17 @@ export class CodeEditorManager {
         this.editors[tabId].layout();
     }
 
+
     addTab(name) {
         if (this.tabData.some(tab => tab.id === name)) {
             alert(`A tab with the name "${name}" already exists.`);
             return;
         }
-
+    
         const id = name;
         const newTab = { id, content: '// New tab content' };
         this.tabData.push(newTab);
-
+    
         this.createTab(newTab);
         this.createEditor(newTab);
         this.switchTab(id);
