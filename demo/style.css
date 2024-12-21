@@ -49,7 +49,7 @@ html, body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: calc(100% - 80px); /* Subtract header + tabs heights (50px + 30px) */
+    height: calc(100% - 30px); /* Subtract header + tabs heights (50px + 30px) */
 }
 
 .split-horizontal {
@@ -201,4 +201,9 @@ iframe {
 .xterm-viewport::-webkit-scrollbar-thumb {
     min-height: 20px;
     background-color: #ffffff20;
+}
+
+
+.dragging {
+    cursor: grabbing; /* Change cursor to "grabbing" when dragging */
 }
