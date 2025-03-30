@@ -8,9 +8,9 @@ fi
 SRC=$(dirname $0)
 SRC=$(realpath "$SRC")
 
-# We use here 3.1.24 since that's the latest tag it's been tested with.
+# We use here 3.1.73 since that's the latest tag it's been tested with.
 # Feel free to try a newer version
-curl --silent --output emscripten.zip --location https://github.com/emscripten-core/emscripten/archive/refs/tags/3.1.24.zip
+curl --silent --output emscripten.zip --location https://github.com/emscripten-core/emscripten/archive/refs/tags/3.1.73.zip
 unzip -q emscripten.zip
 rm emscripten.zip
 mv emscripten-* emscripten
@@ -50,7 +50,7 @@ rm -Rf \
     ./tools/websocket_to_posix_proxy \
     ./*.bat
 
-CONTAINER_ID=$(docker create emscripten/emsdk:3.1.24)
+CONTAINER_ID=$(docker create emscripten/emsdk:3.1.73)
 docker cp $CONTAINER_ID:/emsdk/upstream/emscripten/cache ./cache
 docker rm $CONTAINER_ID
 
